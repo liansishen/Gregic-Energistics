@@ -1,5 +1,7 @@
 package com.epimorphismmc.gregiceng.common.machine.multiblock.part;
 
+import com.epimorphismmc.gregiceng.api.machine.trait.FluidHandlerProxyRecipeTrait;
+
 import com.gregtechceu.gtceu.api.capability.recipe.IO;
 import com.gregtechceu.gtceu.api.gui.GuiTextures;
 import com.gregtechceu.gtceu.api.gui.fancy.ConfiguratorPanel;
@@ -10,7 +12,6 @@ import com.gregtechceu.gtceu.api.machine.feature.IMachineModifyDrops;
 import com.gregtechceu.gtceu.api.machine.feature.multiblock.IDistinctPart;
 import com.gregtechceu.gtceu.api.machine.multiblock.part.TieredIOPartMachine;
 import com.gregtechceu.gtceu.api.machine.trait.ItemHandlerProxyRecipeTrait;
-import com.gregtechceu.gtceu.api.machine.trait.NotifiableFluidTank;
 import com.gregtechceu.gtceu.api.machine.trait.NotifiableItemStackHandler;
 import com.gregtechceu.gtceu.common.item.IntCircuitBehaviour;
 import com.gregtechceu.gtceu.config.ConfigHolder;
@@ -54,7 +55,7 @@ public class BufferPartMachine extends TieredIOPartMachine
             new ManagedFieldHolder(BufferPartMachine.class, TieredIOPartMachine.MANAGED_FIELD_HOLDER);
 
     @Persisted
-    public final NotifiableFluidTank tank;
+    public final FluidHandlerProxyRecipeTrait tank;
 
     @Getter
     @Persisted
@@ -120,8 +121,14 @@ public class BufferPartMachine extends TieredIOPartMachine
         }
     }
 
-    protected NotifiableFluidTank createTank(long initialCapacity, int slots, Object... args) {
-        return new NotifiableFluidTank(this, slots, getTankCapacity(initialCapacity, getTier()), io);
+    protected FluidHandlerProxyRecipeTrait createTank(
+            long initialCapacity, int slots, Object... args) {
+        return new FluidHandlerProxyRecipeTrait(
+                this,
+                slots,
+                getTankCapacity(initialCapacity, getTier()),
+                io,
+                Set.of(getInventory(), getCircuitInventory()));
     }
 
     @Override
