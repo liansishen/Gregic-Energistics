@@ -84,7 +84,7 @@ public class FluidHandlerProxyRecipeTrait extends NotifiableFluidTank {
             boolean isDistinct) {
         if (io != handlerIO) return left;
         // When fluid distinct is enabled,check all items whether match the recipe
-        if (isDistinct) {
+        if (isDistinct && simulate) {
             Object2IntMap<ItemStack> itemMap =
                     new Object2IntOpenCustomHashMap<>(ItemStackHashStrategy.comparingAllButCount());
             for (NotifiableItemStackHandler handler : handlers) {
@@ -94,9 +94,14 @@ public class FluidHandlerProxyRecipeTrait extends NotifiableFluidTank {
             }
             for (Content content : recipe.getInputContents(ItemRecipeCapability.CAP)) {
                 Ingredient recipeIngredient = ItemRecipeCapability.CAP.of(content.content);
+                boolean isMatch = false;
                 for (ItemStack is : recipeIngredient.getItems()) {
-                    if (!itemMap.containsKey(is)) return left;
+                    if (itemMap.containsKey(is)) {
+                        isMatch = true;
+                        break;
+                    }
                 }
+                if (!isMatch) return left;
             }
         }
         return NotifiableFluidTank.handleIngredient(io, recipe, left, simulate, handlerIO, storages);

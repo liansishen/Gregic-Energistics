@@ -216,24 +216,31 @@ public class IOBufferRecipeHandler extends MachineTrait {
             getMachine().getShareTank().handleRecipeInner(io, recipe, left, slotName, simulate);
             var left2 = new ArrayList<>(left);
             left = handleFluidInner(recipe, left, simulate);
-            // Add item check for fluid recipe
-            Object2IntMap<ItemStack> itemMap =
-                    new Object2IntOpenCustomHashMap<>(ItemStackHashStrategy.comparingAllButCount());
-            var handlers = Set.of(getMachine().getShareInventory(), getMachine().getCircuitInventory());
-            for (NotifiableItemStackHandler handler : handlers) {
-                for (int i = 0; i < handler.storage.getSlots(); i++) {
-                    itemMap.putIfAbsent(handler.storage.getStackInSlot(i), 1);
+            // Add item check for fluid recipe,only check at simulate mode
+            if (simulate) {
+                Object2IntMap<ItemStack> itemMap =
+                        new Object2IntOpenCustomHashMap<>(ItemStackHashStrategy.comparingAllButCount());
+                var handlers = Set.of(getMachine().getShareInventory(), getMachine().getCircuitInventory());
+                for (NotifiableItemStackHandler handler : handlers) {
+                    for (int i = 0; i < handler.storage.getSlots(); i++) {
+                        itemMap.putIfAbsent(handler.storage.getStackInSlot(i), 1);
+                    }
                 }
-            }
-            if (lockedSlot != -1) {
-                for (ItemStack is : getMachine().getInternalInventory()[lockedSlot].getItemInputs()) {
-                    itemMap.putIfAbsent(is, 1);
+                if (lockedSlot != -1) {
+                    for (ItemStack is : getMachine().getInternalInventory()[lockedSlot].getItemInputs()) {
+                        itemMap.putIfAbsent(is, 1);
+                    }
                 }
-            }
-            for (Content content : recipe.getInputContents(ItemRecipeCapability.CAP)) {
-                Ingredient recipeIngredient = ItemRecipeCapability.CAP.of(content.content);
-                for (ItemStack is : recipeIngredient.getItems()) {
-                    if (!itemMap.containsKey(is)) return left2;
+                for (Content content : recipe.getInputContents(ItemRecipeCapability.CAP)) {
+                    Ingredient recipeIngredient = ItemRecipeCapability.CAP.of(content.content);
+                    boolean isMatch = false;
+                    for (ItemStack is : recipeIngredient.getItems()) {
+                        if (itemMap.containsKey(is)) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                    if (!isMatch) return left2;
                 }
             }
             return left;
