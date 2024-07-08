@@ -12,8 +12,11 @@ import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
 import com.gregtechceu.gtceu.api.capability.recipe.RecipeCapability;
 import com.gregtechceu.gtceu.api.machine.trait.IRecipeHandlerTrait;
 import com.gregtechceu.gtceu.api.machine.trait.MachineTrait;
+import com.gregtechceu.gtceu.api.machine.trait.NotifiableItemStackHandler;
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
+import com.gregtechceu.gtceu.api.recipe.content.Content;
 import com.gregtechceu.gtceu.api.recipe.ingredient.FluidIngredient;
+import com.gregtechceu.gtceu.utils.ItemStackHashStrategy;
 
 import com.lowdragmc.lowdraglib.side.fluid.FluidStack;
 import com.lowdragmc.lowdraglib.syncdata.ISubscription;
@@ -23,13 +26,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenCustomHashMap;
 import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.epimorphismmc.gregiceng.utils.GregicEngUtils.copyFluidIngredients;
@@ -212,7 +214,29 @@ public class IOBufferRecipeHandler extends MachineTrait {
                 boolean simulate) {
             if (io != IO.IN) return left;
             getMachine().getShareTank().handleRecipeInner(io, recipe, left, slotName, simulate);
-            return handleFluidInner(recipe, left, simulate);
+            var left2 = new ArrayList<>(left);
+            left = handleFluidInner(recipe, left, simulate);
+            // Add item check for fluid recipe
+            Object2IntMap<ItemStack> itemMap =
+                    new Object2IntOpenCustomHashMap<>(ItemStackHashStrategy.comparingAllButCount());
+            var handlers = Set.of(getMachine().getShareInventory(), getMachine().getCircuitInventory());
+            for (NotifiableItemStackHandler handler : handlers) {
+                for (int i = 0; i < handler.storage.getSlots(); i++) {
+                    itemMap.putIfAbsent(handler.storage.getStackInSlot(i), 1);
+                }
+            }
+            if (lockedSlot != -1) {
+                for (ItemStack is : getMachine().getInternalInventory()[lockedSlot].getItemInputs()) {
+                    itemMap.putIfAbsent(is, 1);
+                }
+            }
+            for (Content content : recipe.getInputContents(ItemRecipeCapability.CAP)) {
+                Ingredient recipeIngredient = ItemRecipeCapability.CAP.of(content.content);
+                for (ItemStack is : recipeIngredient.getItems()) {
+                    if (!itemMap.containsKey(is)) return left2;
+                }
+            }
+            return left;
         }
 
         @Override
